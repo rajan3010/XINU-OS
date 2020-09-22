@@ -1,0 +1,39 @@
+Q1.
+Exponential Scheduling:
+
+Advantages:
+
+* Since it uses the concept of randomizaton, all the processes have chances of being scheduled thus taking care of the starvatio issue.
+* The processes having priority around the value of lambda hace more probability of getting scheduled. Hence we can say we have some control over the scheduling policy.
+
+
+Disadvantages
+* If some interactive processes like I/O process have a low priority then there are chances that it might have to wait for a long time before getting scheduled.
+*Chosing correct lambda is sometimes necessary to avoid unfair scheduling
+
+
+Linux-Like Scheduler:
+
+Advantages:
+
+*Processes rather than being scheduled with a random value like in the exponential scheduler, they are scheduled over the goodness value which in turn is dependent on the priority, hence it ensures higher priority processes are given preference over the lower priority ones.
+
+*Interactive process with a lower priority need not have to starve until a high priority process is completed, instead the high prirority process can be interrupted with its quantum preserved and the I/O process executed.
+
+Disadvantages:
+
+*Its a rather convoluted algorithm when compared to exponential scheduling, and hence scheduling times will be high.
+
+Round Robin Scheduler:
+
+Advantages:
+* Its a fast algorithm since lesser number of computations are involved.
+* If there are a lot of high priority processes, most of them will get an equal share of time.
+ 
+Disadavantages:
+*Low priority processes would have to starve for CPU usage if too much time is spent on high priority processes.
+
+Q2.
+Exponential Distribution Scheduler: NULL processes are scehduled only if the ready queue is empty.
+Linux-like scheduler: The NULL process is scheduled at the beginning of each epoch when the goodness value is 0
+Round-Robin Scheduler of XINU: NULL processes are not scheduled. 
