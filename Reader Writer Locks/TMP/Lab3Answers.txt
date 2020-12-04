@@ -1,0 +1,73 @@
+ECE 501- Operating Systems
+PA3- Additional Questions
+
+Question 1
+The priority inversion problem could cause that a higher-priority process needs to wait for the completion of a lower-priority process.
+i)Priority inheritance is one approach to address this issue. Please give another approach and briefly describe its idea.
+
+A. Random boosting and Avoid blocking are two other methods that could be used for solving Priority Inversion.
+
+-> Random Boosting - This is one of the famous solutions that is also emplyed by MIcrosoft. Ready processes holding the locks are randomly boosted in priority until they exit the critical section.
+->Avoid blocking - Since priority inversion involves a low-priority process blocking a high-priority process, one of the ways to avoid priority inversion is to avoid blocking, for eg. , by using a non-block synchronization.
+
+ii)Design a test case to show that your approach can address the priority inversion problem. You should compare the results that derived from the original XINU implementation (use semaphore) and that derived from your implementation (use readers/writer locks). Put your results in Lab3Answers.txt and your test case program (name it task1.c) in both ./sys and ./TMP
+
+A:
+SeaBIOS (version 1.11.0-2.el7)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+07F95620+07EF5620 C980
+                                                                               
+
+
+Booting from ROM..pcibios_init : PCI BIOS revision 2.10 entry at 0xfd225
+pci_init: PCI BIOS initialization succeeded
+
+
+Xinu Version (CSC501 1-2017 base) #20 (ranbazh@vclv99-90.hpc) Tue Nov 17 00:44:48 EST 2020
+
+16777216 bytes real mem
+153263 bytes Xinu code
+clock enabled
+Priority Inversion with Locks
+
+Test the basic priority inheritence: Locks
+-start A, then sleep 1s.
+  A: to acquire lock
+  A: acquired lock, sleep 10s
+A A A A A A A A A A 
+ Prio of writer before rd1: 20-start C, then sleep 1s.
+  C: to acquire lock
+
+ Prio of writer after rd1: 40-start B, then sleep 1s.
+  B: to acquire lock
+  A: to release lock
+  B: acquired lock
+B B B B B B B B B B   B: to release lock
+  C: acquired lock, sleep 10s
+C C C C C C C C C C Priority Inversion with Semaphores
+
+An equivalent comparison with Semaphore
+-start A, then sleep 1s.
+  A: to acquire semaphore
+  A: acquired semaphore, sleep 10s
+A A A A A A A A A A 
+ Prio of writer before rd1: 20-start C, then sleep 1s.
+  C: to acquire semaphore
+
+ Prio of writer after rd1: 20-start B, then sleep 1s.
+  B: to acquire semaphore
+  C: to release lock
+  A: to release semaphore
+  C: acquired semaphore, sleep 10s
+C C C C C C C C C C
+
+With Lock we can see process A always finishes first and the locks B and C are chose with respect to their wait time, since their lock priorities are set the same.
+With Semaphores however we can see although A and C completes due to some synchronization issues B doesn't get to complete. (Screenshot attached in TMP)
+
+Question 2
+Synchronization is a quite complex issue in operating systems. To show your understanding about process synchronization, you are asked to point out a reader/writer synchronization issue in this pesudo-code: task2_sync_issue.c. Multiple reader threads can execute this code concurrently by calling do_update. All the variables starting with global_ are global variables. You are asked to describe the potential issue caused by the incorrect synchronization and point out at least one possible thread interleaving that would trigger the problem.
+
+A: One major problem with the given code is the do_update function acquires the lock as reader lock and tries to perform a write operation. As the reader locks can be shared with other reader processes, if any other thread requests the reader lock, it will be granted to them as well. Due to this, though the output may not be in the expected order.This can cause incorrect synchronization issues.
+
+
