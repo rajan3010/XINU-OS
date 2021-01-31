@@ -36,3 +36,43 @@
 
 -  **Implementation**
 
+   - Create a lock: ```int lcreate (void)```- Creates a lock and returns a lock descriptor that can be used in further calls to refer to this lock. THis call should return **SYSERR** if there are no available entries in the lock table. The number of locks allowed is NLOCKS, which you should define in ```lock.h``` to be 50
+   - Destroy a lock: ```int ldelete(int lockdescriptor)``` - Deletes the lock identified by the descripto ```lockdescriptor```. Explained further in "Lock Deletion" section.
+   - Acquisiton of a lock for read/ write: ```int lock (int ldes1, int type, int priority)``` - This call is explained below ("Wait on locks with Priority").
+   - Simultaneous release of multiple locks: ```int releaseall (int numlocks, int ldes1, ..., int ldesN)```
+
+- **Lock Deletion**
+
+  - As mentioned in one of the drawbacks with XINU semaphores, the way XINU handles ```sdelete``` may have undesirable effects if a semaphore is deleted while a process or processes are waiting on it.
+  - Examining the code for wait and sdelete, you will notice that ```sdelete``` readies processes waiting on a semaphore being deleted. So they will return from wait with OK
+
+  - Edge cases
+    - Lock system is implemented such that waiting on a lock will return a new constant DELETED instead of OK when returning due to deleted lock.
+    - This will indicate to the user that the lock was deleted and not unlocked. As before, any calls to lock() after the lock is deleted should return SYSERR
+    - There is also another subtle but important point to note
+    ```
+    Consider the following scenario.Let us say that there are three processes A, B,
+    and C.Let A create a lock with descriptor=X .Let A and B use X to synchronize among themselves. Now, let us assume that A
+    deletes the lock X. But B does not know about that. If, now, C tries to create a lock, there is a chance that it gets the same lock descriptor as that of X (lock descriptors are limited and hence can be reused). When B waits on X the next time, it should get a SYSERR. It should not acquire the lock C has now newly created, even if this lock has the same id as that of the previous one. You have to find a way to implement this facility, in addition to the DELETED issue above
+    ```
+- **Locking Policy**
+
+  - no readers should be kept waiting unless
+    - a writer has already obtained the lock
+    - there is a higher priority writer already waiting for the lock
+  - Hence, when a writer or the last reader releases a lock, the lock should be next given to a process having the highest waiting priority for the lock.
+  - In the case of equal waiting priorities, the lock will be given to the process that
+has the longest waiting time (in milliseconds) on the lock.
+  - If the waiting priorities are equal and the waiting time difference is within 1
+second, writers should be given preference to acquire the lock over readers.
+  - In any case, if a reader is chosen to have a lock, then all the
+other waiting readers having priority not less than that of the highest-priority waiting writer for the same lock should also be admitted.
+
+- **Wait on Locks with Priority**
+
+  - This call allows a process to wait on a lock with priority. The call will have the form as below, where priority is any integer priority value (including negative values, positive values and zero)
+    ```
+    int lock (int ldes1, int type, int priority)
+    ```
+  - Thus when a process waits, it will be able to specify a wait priority. Rather than simply enqueuing the process at the end of the queue, the lock() call should now insert the process into the lock's wait list according to the wait priority.
+  - Please note that the wait priority is different from a process's scheduling priority specified in the create(..) system call. A larger value of the priority parameter means a higher priority.
