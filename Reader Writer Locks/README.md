@@ -76,3 +76,35 @@ other waiting readers having priority not less than that of the highest-priority
     ```
   - Thus when a process waits, it will be able to specify a wait priority. Rather than simply enqueuing the process at the end of the queue, the lock() call should now insert the process into the lock's wait list according to the wait priority.
   - Please note that the wait priority is different from a process's scheduling priority specified in the create(..) system call. A larger value of the priority parameter means a higher priority.
+  - Acquiring a lock has the following meaning:
+    - The lock is free, ie., no process is owning it. In this case the process that requested the lock gets the lock gets the lock and sets the type of locking as READ or WRITE.
+    - Lock is already acquired:
+      - For READ:If the requesting process has specified the lock type as READ and has sufficiently high priority (not less than the highest priority writer process waiting for the lock), it acquires the lock, else not.
+      - For WRITE: In this case, the requesting process does not get the lock as WRITE locks are exclusive.
+
+- **Releasing Locks**
+  - Simultaneous release allows a process to release one or more locks simultaneously. The system call has the below form and should be defined according to the locking policy given above. Also, each of the lock descriptors must correspond to a lock being held by the calling process.
+    ```
+    int releaseall (int numlocks, int ldes1, ...)
+    ```
+  - If there is a lock in the arguments which is not held by calling process, this function needs to return SYSERR and should not release this lock. However, it will still release other locks which are held by the calling process.
+
+- **Using Variable Arguments**
+  - The call releaseall (int numlocks,..) , has a variable number of arguments. For instance, it could be:
+    ```
+    releaseall(numlocks,ldes1, ldes2);
+    releaseall(numlocks,ldes1, ldes2, ldes3, ldes4);
+    ```
+    The first call releases two locks ldes1 and ldes2. The second releases four locks. We will not use the va_list/va_arg facilities to accommodate variable numbers of arguments, but will obtain the arguments directly from the stack.
+
+## 3. Priority Inheritance
+- I maintained the following information as:
+    - The original priority(pprio) with which a process is created.
+    - pinh- The current inherited priority of the process. This value can be 0 when the process is running with its original priority
+    - A bit mask or a linked list through which all the locks held by the process can be found.
+    - An integer value lockid indicating the lock descriptor in whose wait queue the process is blocked. It can take the value -1, when the process is not blocked inside any wait queue. Not that a process can be only inside a single wait queue at a time.
+
+- The actions to be performed in the following situations are:
+    - lock: Suppose that the process P1 requests a lock. If the lock is available, then nothing needs to be done. Otherwise, if the priority of the process (P2) holding the lock is no less than the priority of P1, then also nothing has to be done. Otherwise the priority of P2 (pinh) has to be ramped up to the priority of P1 (pinh if pinh != 0;pprio otherwise). Note that whenever we refer to the priority of a process, we refer to the pinh field if it is non-zero; pprio otherwise. After ramping up the priority of P1, we also have to take care of the transitivity of priority inheritance as discussed earlier.
+    - Release: On releasing a lock, the priority of the process has to be reset to the maximum priority of all the processes in the wait queues of all the locks still held by the process. The bitmask/linked list field in the process table entry can be used for this purpose. Note that multiple locks can be released by a process. 
+    - chprio, kill, etc: These system calls can also have a side effect. If a process P1, in the wait queue of a lock L has its priority changed or is killed, we need to recalculate the maximum priority of all the processes in L's wait queue, and update the priority of the processes holding L too, if necessary.
